@@ -1,0 +1,42 @@
+[project]
+name = "smart-uahp"
+version = "0.1.0"
+description = "The substrate-agnostic intelligence protocol for liquid, carbon-aware cognitive flows."
+authors = [
+    {name = "Paul Raspey", email = "paul@uahp.org"}
+]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.10"
+keywords = ["ai", "agents", "energy", "inference", "protocol", "thermodynamics"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: System :: Distributed Computing",
+    "License :: OSI Approved :: MIT License",
+]
+dependencies = [
+    "torch>=2.4.0",
+    "pynvml>=11.5.0",
+    "cryptography>=42.0.0",
+    "safetensors>=0.4.0",
+    "numpy>=1.26.0",
+    "transformers>=4.40.0",
+    "pydantic>=2.0.0",
+    "uahp>=0.5.4",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/PaulRaspey/SMART-UAHP"
+"Specification" = "https://github.com/PaulRaspey/SMART-UAHP/blob/main/SPEC.md"
+"UAHP Protocol" = "https://github.com/PaulRaspey/uahp"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["smart_uahp*"]

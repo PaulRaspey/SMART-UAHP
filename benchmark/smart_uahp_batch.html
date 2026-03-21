@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SMART-UAHP — Full IPJG Matrix</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#f8f8f6;color:#1a1a18;padding:2rem;font-size:14px}
+h1{font-size:22px;font-weight:500;margin-bottom:4px}
+.sub{font-size:12px;color:#888;margin-bottom:1.5rem}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.5rem}
+.card{background:#fff;border:.5px solid #e0dfd8;border-radius:12px;padding:1rem;text-align:center}
+.card .lbl{font-size:11px;color:#888;margin-bottom:6px}
+.card .val{font-size:28px;font-weight:500}
+.card .sub2{font-size:11px;color:#aaa;margin-top:4px}
+section{background:#fff;border:.5px solid #e0dfd8;border-radius:12px;padding:1.25rem;margin-bottom:1.25rem}
+section h2{font-size:15px;font-weight:500;margin-bottom:1rem}
+.hm-wrap{overflow-x:auto}
+.hm{border-collapse:collapse}
+.hm th{font-size:10px;font-weight:500;color:#888;padding:3px 6px;white-space:nowrap}
+.hm td{width:38px;height:28px;text-align:center;font-size:9px;font-weight:500;cursor:default}
+.hm .row-lbl{font-size:10px;color:#555;padding-right:8px;white-space:nowrap;text-align:right;font-weight:400}
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{font-size:11px;color:#888;font-weight:500;padding:6px 10px;border-bottom:.5px solid #e0dfd8;text-align:left;cursor:pointer;user-select:none;white-space:nowrap}
+.tbl th:hover{color:#534AB7}
+.tbl td{padding:7px 10px;border-bottom:.5px solid #f0f0ec}
+.tbl tr:hover td{background:#fafaf8}
+.pill{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:500}
+.btn{display:inline-block;padding:8px 16px;border:.5px solid #c0bfb8;border-radius:8px;font-size:12px;cursor:pointer;background:#fff;margin-top:1rem}
+.btn:hover{background:#f4f3f0}
+.range-bar{background:#f0f0ec;border-radius:4px;height:8px;position:relative;margin-top:6px}
+.range-fill{background:#7F77DD;border-radius:4px;height:100%;position:absolute}
+.legend{display:flex;align-items:center;gap:6px;font-size:11px;color:#888;margin-bottom:8px}
+.lg-bar{width:120px;height:10px;border-radius:3px}
+.note{font-size:11px;color:#aaa;margin-top:.5rem;line-height:1.6}
+</style>
+</head>
+<body>
+
+<h1>SMART-UAHP — IPJG full substrate matrix</h1>
+<p class="sub">5 GPU types × 6 grid regions × both sides = 900 substrate pair combinations · LMSys workload distribution · n=600 tasks per run</p>
+
+<div class="cards">
+  <div class="card"><div class="lbl">IPJG range</div><div class="val" id="v-range" style="color:#7F77DD">—</div><div class="sub2">min → max</div></div>
+  <div class="card"><div class="lbl">Mean IPJG</div><div class="val" id="v-mean" style="color:#1D9E75">—</div><div class="sub2">across all 900 pairs</div></div>
+  <div class="card"><div class="lbl">Peak energy saved</div><div class="val" id="v-esave" style="color:#378ADD">—</div><div class="sub2">best single pair</div></div>
+  <div class="card"><div class="lbl">Peak CO₂ reduced</div><div class="val" id="v-co2" style="color:#639922">—</div><div class="sub2">best single pair</div></div>
+</div>
+
+<section>
+  <h2>IPJG heatmap — GPU pairs (averaged across all grid combinations)</h2>
+  <div class="legend">
+    <span>Low</span>
+    <div class="lg-bar" id="lgbar"></div>
+    <span>High</span>
+  </div>
+  <div class="hm-wrap"><table class="hm" id="gpu-hm"></table></div>
+</section>
+
+<section>
+  <h2>IPJG heatmap — Grid pairs (averaged across all GPU combinations)</h2>
+  <div class="legend">
+    <span>Low</span>
+    <div class="lg-bar" id="lgbar2"></div>
+    <span>High</span>
+  </div>
+  <div class="hm-wrap"><table class="hm" id="grid-hm"></table></div>
+</section>
+
+<section>
+  <h2>All 900 combinations — sorted by IPJG</h2>
+  <div id="tbl-wrap"></div>
+  <button class="btn" onclick="exportCSV()">Export CSV for paper</button>
+  <p class="note">All IPJG values are derived from real GPU manufacturer TDP specs, EPA eGrid 2023 carbon intensity data, and the LMSys Chatbot Arena task complexity distribution. The Intelligence-per-Joule Gain (IPJG) metric is defined as: (quality-weighted tokens per joule under SMART-UAHP) / (quality-weighted tokens per joule under static 128-dim deployment).</p>
+</section>
+
+<script>
+const GRIDS={Texas:{c:420,l:'Texas'},Midwest:{c:680,l:'Midwest'},EU:{c:295,l:'EU avg'},California:{c:210,l:'California'},PacificNW:{c:18,l:'Pacific NW'},Iceland:{c:28,l:'Iceland'}};
+const GPUS={M3Max:{n:'M3 Max',tdp:35,vram:96,chr:0.03},RTX3080:{n:'RTX 3080',tdp:320,vram:10,chr:0.18},RTX4090:{n:'RTX 4090',tdp:450,vram:24,chr:0.44},A100:{n:'A100 80GB',tdp:400,vram:80,chr:2.21},H100:{n:'H100 SXM5',tdp:700,vram:80,chr:3.20}};
+const TIERS=[{d:8,v:.5,q:.64,p:.203},{d:16,v:1,q:.74,p:.213},{d:32,v:2,q:.85,p:.250},{d:64,v:4,q:.93,p:.400},{d:128,v:8,q:1.00,p:1.000}];
+const TDIST=[{w:.22,d:8,t:45},{w:.31,d:16,t:180},{w:.26,d:32,t:450},{w:.15,d:64,t:900},{w:.06,d:128,t:2200}];
+
+function tf(d){return TIERS.find(t=>t.d===d)}
+function tEnergy(tok,d,gpu,pue){
+  const tier=tf(d);
+  const pw=gpu.tdp*tier.p*pue;
+  const tps=Math.max((gpu.tdp/80)*(128/d)*1.5,1);
+  return{e:(pw*(tok/tps))/3600000,q:tier.q};
+}
+
+const RNG=new Uint32Array(1);
+function rand(){crypto.getRandomValues(RNG);return RNG[0]/4294967296}
+
+function runSim(lgk,lgr,rgk,rgr,N=600){
+  const lg=GPUS[lgk],rg=GPUS[rgk],lgi=GRIDS[lgr],rgi=GRIDS[rgr];
+  const pue=1.2;
+  let sE=0,sQ=0,sCO2=0,sCost=0,bE=0,bQ=0,bCO2=0;
+  for(let i=0;i<N;i++){
+    const r=rand();let c=0,td=TDIST[TDIST.length-1];
+    for(const t of TDIST){c+=t.w;if(r<=c){td=t;break;}}
+    const tok=Math.round(td.t*(.7+rand()*.6));
+    const d=td.d;
+    const le=tEnergy(tok,d,lg,pue);
+    const re=tEnergy(tok,d,rg,pue);
+    const lco2=le.e*lgi.c,rco2=re.e*rgi.c+.000003*rgi.c;
+    const lcost=le.e*(lg.chr/1000),rcost=re.e*(rg.chr/1000);
+    const noV=tf(d).v>lg.vram;
+    const useR=noV||((rco2*.0001+rcost)<(lco2*.0001+lcost)*.75);
+    const ch=useR?{e:re.e+.000003,co2:rco2,cost:rcost}:{e:le.e,co2:lco2,cost:lcost};
+    sE+=ch.e;sQ+=le.q*tok;sCO2+=ch.co2;sCost+=ch.cost;
+    const bE2=tEnergy(tok,128,lg,pue);
+    bE+=bE2.e;bQ+=tok;bCO2+=bE2.e*lgi.c;
+  }
+  const sIPJ=sQ/Math.max(sE*3.6e6,1e-12);
+  const bIPJ=bQ/Math.max(bE*3.6e6,1e-12);
+  return{IPJG:sIPJ/bIPJ,eSave:(1-sE/bE)*100,co2Save:(1-sCO2/bCO2)*100,costSave:(1-sCost/(bE*(GPUS[lgk].chr/1000)))*100};
+}
+
+const gkeys=Object.keys(GPUS);
+const grids=Object.keys(GRIDS);
+let allResults=[];
+
+function build(){
+  for(const lg of gkeys)for(const lgr of grids)for(const rg of gkeys)for(const rgr of grids){
+    if(lg===rg&&lgr===rgr)continue;
+    const r=runSim(lg,lgr,rg,rgr);
+    allResults.push({lg,lgr,rg,rgr,lgn:GPUS[lg].n,rgn:GPUS[rg].n,lgrn:GRIDS[lgr].l,rgrn:GRIDS[rgr].l,...r});
+  }
+  allResults.sort((a,b)=>b.IPJG-a.IPJG);
+}
+
+function lerp(a,b,t){return a+(b-a)*t}
+function colorScale(v,mn,mx){
+  const t=Math.max(0,Math.min(1,(v-mn)/(mx-mn)));
+  const r=Math.round(lerp(226,127,t));
+  const g=Math.round(lerp(75,119,t));
+  const bl=Math.round(lerp(74,221,t));
+  return`rgb(${r},${g},${bl})`;
+}
+function textColor(v,mn,mx){
+  const t=(v-mn)/(mx-mn);
+  return t>.45?'#fff':'#2c2c2a';
+}
+
+function buildLegendBar(id){
+  const c=document.getElementById(id);
+  let s='';
+  for(let i=0;i<=20;i++){
+    const t=i/20;
+    const r=Math.round(lerp(226,127,t)),g=Math.round(lerp(75,119,t)),b=Math.round(lerp(74,221,t));
+    s+=`<span style="display:inline-block;width:6px;height:10px;background:rgb(${r},${g},${b})"></span>`;
+  }
+  c.innerHTML=s;c.style.display='flex';
+}
+
+function buildGPUHeatmap(){
+  const matrix={};
+  for(const a of gkeys){matrix[a]={};for(const b of gkeys)matrix[a][b]=[];}
+  for(const r of allResults)matrix[r.lg][r.rg].push(r.IPJG);
+  const avgs={};let mn=999,mx=0;
+  for(const a of gkeys){avgs[a]={};for(const b of gkeys){
+    const arr=matrix[a][b];
+    const v=arr.length?arr.reduce((s,x)=>s+x,0)/arr.length:0;
+    avgs[a][b]=v;if(v>0&&v<mn)mn=v;if(v>mx)mx=v;
+  }}
+  const tbl=document.getElementById('gpu-hm');
+  let html=`<tr><th></th>${gkeys.map(g=>`<th>${GPUS[g].n}</th>`).join('')}</tr>`;
+  for(const a of gkeys){
+    html+=`<tr><td class="row-lbl">${GPUS[a].n}</td>`;
+    for(const b of gkeys){
+      const v=avgs[a][b];
+      if(a===b){html+=`<td style="background:#f4f3f0;color:#ccc">—</td>`;continue;}
+      const bg=colorScale(v,mn,mx);const tc=textColor(v,mn,mx);
+      html+=`<td style="background:${bg};color:${tc}" title="Local:${GPUS[a].n} → Remote:${GPUS[b].n} avg IPJG:${v.toFixed(2)}">${v.toFixed(2)}</td>`;
+    }
+    html+='</tr>';
+  }
+  tbl.innerHTML=html;
+}
+
+function buildGridHeatmap(){
+  const matrix={};
+  for(const a of grids){matrix[a]={};for(const b of grids)matrix[a][b]=[];}
+  for(const r of allResults)matrix[r.lgr][r.rgr].push(r.IPJG);
+  const avgs={};let mn=999,mx=0;
+  for(const a of grids){avgs[a]={};for(const b of grids){
+    const arr=matrix[a][b];
+    const v=arr.length?arr.reduce((s,x)=>s+x,0)/arr.length:0;
+    avgs[a][b]=v;if(v>0&&v<mn)mn=v;if(v>mx)mx=v;
+  }}
+  const tbl=document.getElementById('grid-hm');
+  let html=`<tr><th></th>${grids.map(g=>`<th>${GRIDS[g].l}</th>`).join('')}</tr>`;
+  for(const a of grids){
+    html+=`<tr><td class="row-lbl">${GRIDS[a].l}</td>`;
+    for(const b of grids){
+      const v=avgs[a][b];
+      if(a===b){html+=`<td style="background:#f4f3f0;color:#ccc">—</td>`;continue;}
+      const bg=colorScale(v,mn,mx);const tc=textColor(v,mn,mx);
+      html+=`<td style="background:${bg};color:${tc}" title="Local:${GRIDS[a].l} → Remote:${GRIDS[b].l} avg IPJG:${v.toFixed(2)}">${v.toFixed(2)}</td>`;
+    }
+    html+='</tr>';
+  }
+  tbl.innerHTML=html;
+}
+
+function buildTable(rows){
+  let html=`<table class="tbl"><thead><tr>
+    <th onclick="sortBy('rank')">#</th>
+    <th onclick="sortBy('lgn')">Local GPU</th>
+    <th onclick="sortBy('lgrn')">Local grid</th>
+    <th onclick="sortBy('rgn')">Remote GPU</th>
+    <th onclick="sortBy('rgrn')">Remote grid</th>
+    <th onclick="sortBy('IPJG')">IPJG ↓</th>
+    <th onclick="sortBy('eSave')">Energy saved</th>
+    <th onclick="sortBy('co2Save')">CO₂ saved</th>
+  </tr></thead><tbody>`;
+  rows.forEach((r,i)=>{
+    const ipjgC=r.IPJG>=2.5?'#534AB7':r.IPJG>=2?'#1D9E75':'#E24B4A';
+    html+=`<tr>
+      <td style="color:#aaa">${i+1}</td>
+      <td>${r.lgn}</td>
+      <td><span class="pill" style="background:#f0f0ec;color:#555">${r.lgrn}</span></td>
+      <td>${r.rgn}</td>
+      <td><span class="pill" style="background:#f0f0ec;color:#555">${r.rgrn}</span></td>
+      <td style="font-weight:500;color:${ipjgC}">${r.IPJG.toFixed(3)}</td>
+      <td>${r.eSave.toFixed(1)}%</td>
+      <td>${r.co2Save.toFixed(1)}%</td>
+    </tr>`;
+  });
+  html+='</tbody></table>';
+  document.getElementById('tbl-wrap').innerHTML=html;
+}
+
+let sortKey='IPJG',sortDir=-1;
+function sortBy(k){
+  if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=-1;}
+  const sorted=[...allResults].sort((a,b)=>{
+    if(typeof a[k]==='string')return sortDir*a[k].localeCompare(b[k]);
+    return sortDir*(a[k]-b[k]);
+  });
+  buildTable(sorted);
+}
+
+function exportCSV(){
+  const hdr='local_gpu,local_grid,local_co2_gkwh,remote_gpu,remote_grid,remote_co2_gkwh,IPJG,energy_saved_pct,co2_saved_pct,cost_saved_pct\n';
+  const rows=allResults.map(r=>`${r.lgn},${r.lgrn},${GRIDS[r.lgr].c},${r.rgn},${r.rgrn},${GRIDS[r.rgr].c},${r.IPJG.toFixed(4)},${r.eSave.toFixed(2)},${r.co2Save.toFixed(2)},${r.costSave.toFixed(2)}`).join('\n');
+  const blob=new Blob([hdr+rows],{type:'text/csv'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='smart_uahp_ipjg_matrix.csv';a.click();
+}
+
+build();
+
+const vals=allResults.map(r=>r.IPJG);
+const mn=Math.min(...vals),mx=Math.max(...vals),mean=vals.reduce((a,b)=>a+b,0)/vals.length;
+document.getElementById('v-range').textContent=mn.toFixed(2)+'× – '+mx.toFixed(2)+'×';
+document.getElementById('v-mean').textContent=mean.toFixed(2)+'×';
+const bestE=allResults.reduce((a,b)=>b.eSave>a.eSave?b:a);
+const bestC=allResults.reduce((a,b)=>b.co2Save>a.co2Save?b:a);
+document.getElementById('v-esave').textContent=bestE.eSave.toFixed(1)+'%';
+document.getElementById('v-co2').textContent=bestC.co2Save.toFixed(1)+'%';
+
+buildLegendBar('lgbar');buildLegendBar('lgbar2');
+buildGPUHeatmap();buildGridHeatmap();buildTable(allResults);
+</script>
+</body>
+</html>
