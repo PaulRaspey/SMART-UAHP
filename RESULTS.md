@@ -46,3 +46,16 @@ This is Energy-Intelligence Symmetry working in the real world. The substrate co
 ---
 
 *Transmitted from Greenville, Texas. First bridge activation: 8:16 PM CST, March 20, 2026.*
+
+## CSP First Validated Run — March 22, 2026
+
+| Metric | Value |
+|---|---|
+| Session B SCS | 0.90 |
+| Cold Start SCS | 0.60 |
+| Continuity Gain | 1.50x |
+| Compression | 10.3x |
+| Topic | Substrate independence vs biological specificity of consciousness |
+| Model | qwen/qwen3-32b via Groq |
+
+**Verdict:** Target met. CSP preserved philosophical thread context across sessions. Cold start missed the "simulation fidelity vs substrate tension" entirely.
