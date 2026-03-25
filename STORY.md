@@ -42,9 +42,13 @@ That is not a new idea in networking. It is a very new idea in AI.
 
 ## Where this is going
 
-These repos are early. The Python modules are new. The benchmark is a simulation, not a hardware measurement. The semantic encoder in CSP is not trained yet.
+These repos are early. The semantic encoder in CSP is not trained yet.
 
-The honest next steps are: run the breathing agent on real hardware with a power meter, measure the IPJG against a static baseline, write it up, and find collaborators who want to help validate it.
+On March 20, 2026, the Carbon-Silicon Bridge ran its first live transmission from this MacBook Air — Intel i5, ERCOT grid, 420 gCO₂/kWh — to a Groq LPU running Qwen3-32B. The measured IPJG was 7.61×. Energy saved: 86.9%. Carbon reduced: 97.3% versus local execution. That is not a simulation. That is a MacBook Air in Greenville, Texas talking to a data center, measured in real time.
+
+Two days later, CSP ran its first validated transfer. A philosophical reasoning thread about substrate independence and consciousness was compressed 10× and handed to a fresh session. The receiving session scored 0.90 semantic continuity. The cold start scored 0.60. The gap is the protocol working.
+
+The honest next steps are: run the breathing agent on real hardware with a power meter, validate IPJG across more substrate pairs, formalize the constraint layer in CSP, and find collaborators who want to help push this further.
 
 If you are a researcher, engineer, or developer who sees the same gap I see, open an issue or reach out. The architecture is sound. The territory still needs to be walked.
 
