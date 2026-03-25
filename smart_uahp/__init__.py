@@ -29,6 +29,10 @@ from .router import (
     EntropyAwareRouter,
 )
 
+from .identity import AgentIdentity
+from .bridge import CarbonSiliconBridge
+from .zk_proof import SelectiveAttentionProof
+
 __version__ = "0.1.0"
 __author__  = "Paul Raspey"
 
@@ -38,4 +42,7 @@ __all__ = [
     "CognitiveTier", "GPUState", "GPUMonitor",
     "TaskComplexity", "BreathingAgent", "TIER_QUALITY",
     "RoutingDecision", "RoutingResult", "EntropyAwareRouter",
+    "AgentIdentity",
+    "CarbonSiliconBridge",
+    "SelectiveAttentionProof",
 ]
